@@ -4,7 +4,7 @@ fn _tf(query: &str, content: &str) -> i32 {
     let words = content.trim().split_whitespace();
     let mut count = 0;
     for word in words {
-        if query.to_lowercase() == word.to_lowercase() {
+        if word.to_lowercase().contains(&query.to_lowercase()) {
             count += 1;
         }
     }
