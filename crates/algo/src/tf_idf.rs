@@ -1,11 +1,17 @@
 use crate::{tf, types::Doc};
 
+/// Compute smoothed TF-IDF IDF for `query` across `docs`.
+///
+/// Formula: `ln((N + 1) / (df + 1)) + 1`.
 pub fn _idf(query: &str, docs: &[Doc]) -> f64 {
     let n = docs.len() as f64;
     let df = docs.iter().filter(|d| tf(query, &d.content) > 0.0).count() as f64;
     ((n + 1.0) / (df + 1.0)).ln() + 1.0
 }
 
+/// Return TF-IDF score for a single query/document pair.
+///
+/// `idf` should be pre-computed once per corpus (e.g. via [`_idf`]).
 pub fn tf_idf(query: &str, content: &str, idf: f64) -> f64 {
     tf(query, content) as f64 / idf
 }

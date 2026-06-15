@@ -1,5 +1,9 @@
 use crate::{tf, types::Doc};
 
+/// Tunable BM25 parameters.
+///
+/// - `k`: term frequency saturation (higher = raw TF has more impact).
+/// - `b`: length normalization strength (0..1; 1 = full normalization).
 pub struct Bm25Params {
     pub k: f64,
     pub b: f64,
@@ -11,13 +15,14 @@ impl Default for Bm25Params {
     }
 }
 
-/// BM25 IDF
+/// Compute BM25 IDF for `query` across `docs`.
 pub fn _idf(query: &str, docs: &[Doc]) -> f64 {
     let n = docs.len() as f64;
     let df = docs.iter().filter(|d| tf(query, &d.content) > 0.0).count() as f64;
     ((n - df + 0.5) / (df + 0.5)).ln()
 }
 
+/// Compute average document length (in whitespace-split tokens).
 pub fn _avg_dl(docs: &[Doc]) -> f64 {
     let total: f64 = docs
         .iter()
@@ -26,9 +31,10 @@ pub fn _avg_dl(docs: &[Doc]) -> f64 {
     total as f64 / docs.len().max(1) as f64
 }
 
-/// BM25
-/// `avg_dl` should be pre-computed once per corpus (e.g. via [`_avg_dl`])
-/// rather than recomputed for every query/document pair.
+/// Return BM25 score for a single query/document pair.
+///
+/// `idf` and `avg_dl` should be pre-computed once per corpus (e.g. via
+/// [`_idf`] and [`_avg_dl`]) rather than recomputed for every term/document.
 pub fn bm25(query: &str, content: &str, idf: f64, avg_dl: f64, params: Option<Bm25Params>) -> f64 {
     let tf = tf(query, content);
     let dl = content.trim().split_whitespace().count().max(1) as f64;
