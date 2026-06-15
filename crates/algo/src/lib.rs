@@ -1,79 +1,59 @@
-pub struct Doc {
-    pub path: String,
-    pub content: String,
+pub mod bm25;
+pub mod tf_idf;
+pub mod types;
+
+use std::collections::HashMap;
+use types::Doc;
+
+pub struct AlgoStats {
+    pub idf: HashMap<String, f64>,
+    pub avg_dl: f64,
 }
 
-pub fn _tf(query: &str, content: &str) -> i32 {
-    let words = content.trim().split_whitespace();
-    let mut count = 0;
-    for word in words {
-        if word.to_lowercase().contains(&query.to_lowercase()) {
-            count += 1;
-        }
+pub fn score(query: &str, content: &str, docs: &[Doc], algo: &str) -> f64 {
+    let idf = idf(query, docs, algo);
+    match algo {
+        "bm25" => bm25::bm25(query, content, idf, bm25::_avg_dl(docs), None),
+        _ => tf_idf::tf_idf(query, content, idf),
     }
-    count
 }
 
-pub fn _idf(query: &str, docs: &[Doc]) -> f64 {
-    let n = docs.len() as f64;
-    let df = docs.iter().filter(|d| _tf(query, &d.content) > 0).count() as f64;
-    ((n + 1.0) / (df + 1.0)).ln() + 1.0
+/// Pre-compute global statistics (IDF per term, average doc length) once.
+/// Use with [`score_with_stats`] to avoid repeated full-corpus scans.
+pub fn compute_stats(terms: &[String], docs: &[Doc], algo: &str) -> AlgoStats {
+    let mut idf_map = HashMap::with_capacity(terms.len());
+    for term in terms {
+        idf_map.insert(term.clone(), idf(term, docs, algo));
+    }
+    let avg_dl = if algo == "bm25" {
+        bm25::_avg_dl(docs)
+    } else {
+        0.0
+    };
+    AlgoStats { idf: idf_map, avg_dl }
 }
 
-pub fn tf_idf(query: &str, content: &str, idf: f64) -> f64 {
-    _tf(query, content) as f64 / idf
+/// Score a single term using pre-computed statistics.
+pub fn score_with_stats(query: &str, content: &str, stats: &AlgoStats, algo: &str) -> f64 {
+    let idf = *stats.idf.get(query).unwrap_or(&0.0);
+    match algo {
+        "bm25" => bm25::bm25(query, content, idf, stats.avg_dl, None),
+        _ => tf_idf::tf_idf(query, content, idf),
+    }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub fn tf(query: &str, content: &str) -> f64 {
+    let query = query.to_lowercase();
+    content
+        .trim()
+        .split_whitespace()
+        .filter(|w| w.to_lowercase() == query)
+        .count() as f64
+}
 
-    #[test]
-    fn test_tf() {
-        assert_eq!(_tf("the", "the quick brown fox jumps over the lazy dog"), 2);
-        assert_eq!(_tf("a", " She is a beautiful girl, a mother. "), 3);
-        assert_eq!(_tf("a", " taaadfaa "), 1);
-    }
-    fn load_test_corpus() -> Vec<Doc> {
-        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .to_path_buf();
-        [
-            root.join("test_files/test_file.txt"),
-            root.join("test_files/test_file_2.txt"),
-            root.join("test_files/test_files_3.txt"),
-        ]
-        .into_iter()
-        .map(|p| Doc {
-            path: p.to_string_lossy().to_string(),
-            content: std::fs::read_to_string(&p).unwrap(),
-        })
-        .collect()
-    }
-
-    #[test]
-    fn test_idf() {
-        let corpus = load_test_corpus();
-
-        let idf_the = _idf("the", &corpus);
-        assert!((idf_the - ((3.0_f64 + 1.0) / (3.0 + 1.0)).ln() - 1.0).abs() < 1e-9);
-
-        let idf_cat = _idf("cat", &corpus);
-        assert!((idf_cat - ((3.0_f64 + 1.0) / (1.0 + 1.0)).ln() - 1.0).abs() < 1e-9);
-
-        let idf_none = _idf("nonexistent", &corpus);
-        assert!((idf_none - ((3.0_f64 + 1.0) / (0.0 + 1.0)).ln() - 1.0).abs() < 1e-9);
-    }
-
-    #[test]
-    fn test_tf_idf() {
-        let corpus = load_test_corpus();
-        let idf_the = _idf("the", &corpus);
-
-        let score = tf_idf("the", &corpus[0].content, idf_the);
-        assert!((score - 1.0 / idf_the).abs() < 1e-9);
+pub fn idf(query: &str, docs: &[Doc], algo: &str) -> f64 {
+    match algo {
+        "bm25" => crate::bm25::_idf(query, docs),
+        _ => crate::tf_idf::_idf(query, docs),
     }
 }

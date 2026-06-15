@@ -1,9 +1,8 @@
-use algo::{_idf, tf_idf};
 use clap::Parser;
-use geegle::{DocScore, get_corpus, load_docs};
+use geegle::{get_corpus, get_score, load_docs};
 
 #[derive(Parser, Debug)]
-#[command(name = "geegle", about = "Search files with TF-IDF ranking")]
+#[command(name = "geegle", about = "Search files with keyword-based ranking")]
 struct Args {
     /// Directory to search
     #[arg(short, long, default_value = ".")]
@@ -11,6 +10,12 @@ struct Args {
     /// Keyword based query
     #[arg(short, long)]
     query: String,
+    /// Algorithm: bm25, tfidf ...
+    #[arg(short = 'a', long, default_value = "bm25")]
+    algo: String,
+    /// Top-N results
+    #[arg(short = 'n', long, default_value = "5")]
+    top_n: usize,
 }
 
 #[tokio::main]
@@ -19,27 +24,16 @@ async fn main() {
     let corpus = get_corpus(&args.dir).unwrap_or_default();
 
     if corpus.is_empty() {
-        eprintln!("no files found in {}", args.dir);
+        eprintln!("Given directory is empty");
         return;
     }
     let docs = load_docs(&corpus).await;
-    let idf_value = _idf(&args.query, &docs);
 
-    let mut scores: Vec<DocScore> = docs
-        .into_iter()
-        .map(|d| {
-            let score = tf_idf(&args.query, &d.content, idf_value);
-            DocScore {
-                path: d.path,
-                score,
-            }
-        })
-        .filter(|d| d.score > 0.0)
-        .collect();
-
+    let mut scores = get_score(&args.query, &docs, &args.algo);
+    scores.retain(|d| d.score > 0.0);
     scores.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
 
-    for score in scores {
+    for score in scores.iter().take(args.top_n) {
         println!("{}", score);
     }
 }

@@ -1,4 +1,4 @@
-use algo::Doc;
+use algo::types::Doc;
 use colored::Colorize;
 use core::fmt;
 use futures::stream::{self, StreamExt};
@@ -19,6 +19,14 @@ impl fmt::Display for DocScore {
             format!("{:.2}", self.score).green()
         )
     }
+}
+
+pub fn tokenize(text: &str) -> Vec<String> {
+    text.to_lowercase()
+        .split_whitespace()
+        .map(|s| s.trim_matches(|c: char| !c.is_alphanumeric()).to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
 }
 
 pub fn get_corpus<P: AsRef<std::path::Path>>(
@@ -47,4 +55,22 @@ pub async fn load_docs(paths: &[PathBuf]) -> Vec<Doc> {
         .buffer_unordered(128)
         .collect()
         .await
+}
+
+pub fn get_score(terms: &str, docs: &[Doc], algo: &str) -> Vec<DocScore> {
+    let terms = tokenize(terms);
+    let stats = algo::compute_stats(&terms, docs, algo);
+    docs
+        .iter()
+        .map(|d| {
+            let total: f64 = terms
+                .iter()
+                .map(|t| algo::score_with_stats(t, &d.content, &stats, algo))
+                .sum();
+            DocScore {
+                path: d.path.clone(),
+                score: total / terms.len() as f64,
+            }
+        })
+        .collect()
 }
