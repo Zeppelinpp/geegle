@@ -30,7 +30,10 @@ pub fn compute_stats(terms: &[String], docs: &[Doc], algo: &str) -> AlgoStats {
     } else {
         0.0
     };
-    AlgoStats { idf: idf_map, avg_dl }
+    AlgoStats {
+        idf: idf_map,
+        avg_dl,
+    }
 }
 
 /// Score a single term using pre-computed statistics.

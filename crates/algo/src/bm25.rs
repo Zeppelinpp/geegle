@@ -27,7 +27,6 @@ pub fn _avg_dl(docs: &[Doc]) -> f64 {
 }
 
 /// BM25
-///
 /// `avg_dl` should be pre-computed once per corpus (e.g. via [`_avg_dl`])
 /// rather than recomputed for every query/document pair.
 pub fn bm25(query: &str, content: &str, idf: f64, avg_dl: f64, params: Option<Bm25Params>) -> f64 {

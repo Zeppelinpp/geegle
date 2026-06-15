@@ -31,16 +31,31 @@ pub fn tokenize(text: &str) -> Vec<String> {
 
 pub fn get_corpus<P: AsRef<std::path::Path>>(
     path: P,
+    exclude_ext: &[String],
 ) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
     let mut result = Vec::new();
 
     for entry in WalkBuilder::new(path).standard_filters(true).build() {
         let entry = entry?;
         if entry.file_type().map_or(false, |ft| ft.is_file()) {
-            result.push(entry.path().canonicalize()?);
+            let path = entry.path();
+            if matches_excluded_ext(path, exclude_ext) {
+                continue;
+            }
+            result.push(path.canonicalize()?);
         }
     }
     Ok(result)
+}
+
+fn matches_excluded_ext(path: &std::path::Path, exclude_ext: &[String]) -> bool {
+    if exclude_ext.is_empty() {
+        return false;
+    }
+    let Some(ext) = path.extension().and_then(|e| e.to_str()) else {
+        return false;
+    };
+    exclude_ext.iter().any(|e| e.eq_ignore_ascii_case(ext))
 }
 
 pub async fn load_docs(paths: &[PathBuf]) -> Vec<Doc> {
@@ -60,8 +75,7 @@ pub async fn load_docs(paths: &[PathBuf]) -> Vec<Doc> {
 pub fn get_score(terms: &str, docs: &[Doc], algo: &str) -> Vec<DocScore> {
     let terms = tokenize(terms);
     let stats = algo::compute_stats(&terms, docs, algo);
-    docs
-        .iter()
+    docs.iter()
         .map(|d| {
             let total: f64 = terms
                 .iter()

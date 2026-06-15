@@ -24,11 +24,11 @@ Binary: `./target/release/geegle`
 ## Usage
 
 ```bash
-# TF-IDF (default)
+# BM25 (default)
 geegle -q "config parser" -d ./src
 
-# BM25
-geegle -q "config parser" -d ./src -a bm25
+# TF-IDF
+geegle -q "config parser" -d ./src -a tfidf
 
 # Top 3 results
 geegle -q "config parser" -d ./src -n 3
@@ -42,7 +42,14 @@ Output:
 ```
 
 ```bash
-geegle -q "<query>" -d <dir> [-a <algo>] [-n <top_n>]
+geegle -q "<query>" -d <dir> [-a <algo>] [-n <top_n>] [-e <ext1,ext2>]
+```
+
+Examples:
+
+```bash
+# Exclude .json and .lock files
+geegle -q "auth middleware" -d ./src -e json,lock
 ```
 
 Run `geegle -h` for the full list of flags.

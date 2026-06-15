@@ -16,12 +16,15 @@ struct Args {
     /// Top-N results
     #[arg(short = 'n', long, default_value = "5")]
     top_n: usize,
+    /// Exclude files with these extensions (comma-separated, e.g. json,lock,toml)
+    #[arg(short = 'e', long, value_delimiter = ',')]
+    exclude_ext: Vec<String>,
 }
 
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
-    let corpus = get_corpus(&args.dir).unwrap_or_default();
+    let corpus = get_corpus(&args.dir, &args.exclude_ext).unwrap_or_default();
 
     if corpus.is_empty() {
         eprintln!("Given directory is empty");

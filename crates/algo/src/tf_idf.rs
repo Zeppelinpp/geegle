@@ -16,7 +16,10 @@ mod tests {
 
     #[test]
     fn test_tf() {
-        assert_eq!(tf("the", "the quick brown fox jumps over the lazy dog"), 2.0);
+        assert_eq!(
+            tf("the", "the quick brown fox jumps over the lazy dog"),
+            2.0
+        );
         assert_eq!(tf("a", " She is a beautiful girl, a mother. "), 2.0);
         assert_eq!(tf("a", " taaadfaa "), 0.0);
     }
