@@ -1,7 +1,6 @@
-use algo::tf_idf;
+use algo::{_idf, tf_idf};
 use clap::Parser;
-use geegle::get_corpus;
-use std::collections::HashMap;
+use geegle::{DocScore, get_corpus, load_docs};
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -11,7 +10,8 @@ struct Args {
     query: String,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args = Args::parse();
     let corpus = get_corpus(&args.dir).unwrap_or_default();
 
@@ -19,20 +19,25 @@ fn main() {
         eprintln!("no files found in {}", args.dir);
         return;
     }
+    let docs = load_docs(&corpus).await;
+    let idf_value = _idf(&args.query, &docs);
 
-    let corpus_strings: Vec<String> = corpus
-        .iter()
-        .map(|p| p.to_string_lossy().to_string())
+    let mut scores: Vec<DocScore> = docs
+        .into_iter()
+        .map(|d| {
+            let score = tf_idf(&args.query, &d.content, idf_value);
+            DocScore {
+                path: d.path,
+                score,
+            }
+        })
         .collect();
 
-    let mut scores: HashMap<String, f64> = HashMap::new();
-    for path in &corpus {
-        let content = std::fs::read_to_string(path).unwrap_or_default();
-        let score = tf_idf(&args.query, &content, corpus_strings.clone());
-        scores.insert(path.to_string_lossy().to_string(), score);
-    }
+    scores.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
 
-    for (path, score) in &scores {
-        println!("{}\t{}", path, score);
+    for score in scores {
+        if score.score > 0.0 {
+            println!("{}\t{}", score.path, score.score);
+        }
     }
 }

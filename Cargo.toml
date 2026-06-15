@@ -12,9 +12,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-walkdir = "2"
 clap = { version = "4", features = ["derive"] }
 algo = { path = "crates/algo" }
+ignore = "0.4"
+tokio = { version = "1", features = ["full"] }
+futures = "0.3"
 
 [workspace.lints]
 rust = {}
