@@ -17,6 +17,7 @@ algo = { path = "crates/algo" }
 ignore = "0.4"
 tokio = { version = "1", features = ["full"] }
 futures = "0.3"
+colored = "3"
 
 [workspace.lints]
 rust = {}

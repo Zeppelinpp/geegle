@@ -1,4 +1,6 @@
 use algo::Doc;
+use colored::Colorize;
+use core::fmt;
 use futures::stream::{self, StreamExt};
 use ignore::WalkBuilder;
 use std::path::PathBuf;
@@ -6,6 +8,17 @@ use std::path::PathBuf;
 pub struct DocScore {
     pub path: String,
     pub score: f64,
+}
+
+impl fmt::Display for DocScore {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}\t{}",
+            self.path.cyan(),
+            format!("{:.2}", self.score).green()
+        )
+    }
 }
 
 pub fn get_corpus<P: AsRef<std::path::Path>>(
